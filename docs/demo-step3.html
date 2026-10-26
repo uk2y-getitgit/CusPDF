@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>보고서 PDF 편집기 3단계 시연</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Nanum+Myeongjo:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#E6EAEE; --surface:#FFFFFF; --surface-2:#F3F5F8; --surface-3:#E9EDF2;
+  --ink:#1B2430; --ink-2:#4F5A68; --line:#CDD4DC;
+  --accent:#2457B3; --accent-ink:#FFFFFF; --accent-soft:#DCE6F7;
+  --tag:#F2C230; --tag-ink:#1B2430; --danger:#B3322A; --danger-soft:#F8E1DE; --ok:#1C7343;
+  --viewer:#7F8893; --paper:#FFFFFF; --paper-ink:#23262B; --paper-line:#C9CDD3;
+  color-scheme: light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#11161C; --surface:#1A2129; --surface-2:#212933; --surface-3:#29323D;
+    --ink:#E5E9EE; --ink-2:#A7B1BD; --line:#36404C;
+    --accent:#7BA5F2; --accent-ink:#0C1422; --accent-soft:#25344D;
+    --danger:#F08A80; --danger-soft:#3A2224; --ok:#6FCB94; --viewer:#0C1015;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#11161C; --surface:#1A2129; --surface-2:#212933; --surface-3:#29323D;
+  --ink:#E5E9EE; --ink-2:#A7B1BD; --line:#36404C;
+  --accent:#7BA5F2; --accent-ink:#0C1422; --accent-soft:#25344D;
+  --danger:#F08A80; --danger-soft:#3A2224; --ok:#6FCB94; --viewer:#0C1015;
+  color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:14px;line-height:1.5}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.layout{display:grid;grid-template-columns:340px minmax(0,1fr);gap:20px;height:100%;padding:20px;max-width:1600px;margin:0 auto}
+
+.guide{background:var(--surface);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.guide-head{padding:22px 22px 16px;border-bottom:1px solid var(--line)}
+.guide-head h1{font-size:20px;line-height:1.35;margin:0 0 8px;font-weight:600}
+.guide-head p{margin:0;color:var(--ink-2);font-size:13px}
+.progress{margin-top:14px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2)}
+.bar{flex:1;height:6px;background:var(--surface-3);border-radius:3px;overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:var(--ok);transition:width .3s}
+.steps{list-style:none;margin:0;padding:10px 12px;overflow:auto;flex:1}
+.step{border-radius:8px;margin-bottom:4px}
+.step-head{width:100%;display:flex;align-items:center;gap:12px;padding:10px;background:none;border:0;border-radius:8px;cursor:pointer;text-align:left;min-height:44px}
+.step-head:hover{background:var(--surface-2)}
+.num{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:600;font-size:13px;background:var(--surface-3);color:var(--ink-2)}
+.step[data-active="true"]{background:var(--surface-2)}
+.step[data-active="true"] .num{background:var(--tag);color:var(--tag-ink)}
+.step[data-done="true"] .num{background:var(--ok);color:#fff}
+.step-title{flex:1;font-weight:500}
+.step-body{display:none;padding:0 12px 14px 50px;font-size:13px}
+.step[data-active="true"] .step-body{display:block}
+.step-body p{margin:0 0 10px}
+.step-body strong{display:block;font-weight:600;font-size:12px;color:var(--ink-2);margin-bottom:2px}
+.step-body .real{padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:6px}
+.guide-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;color:var(--ink-2)}
+.btn-text{background:none;border:1px solid var(--line);border-radius:6px;padding:8px 12px;cursor:pointer;min-height:36px;white-space:nowrap}
+.btn-text:hover{background:var(--surface-2)}
+
+.app{background:var(--surface);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden;box-shadow:0 12px 32px -18px rgba(20,30,45,.45)}
+.titlebar{display:flex;align-items:center;gap:10px;height:38px;padding:0 14px;background:var(--surface-2);border-bottom:1px solid var(--line);font-size:13px}
+.titlebar b{font-weight:600}
+.titlebar span{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toolbar{display:flex;align-items:center;gap:4px;padding:6px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tb{display:inline-flex;align-items:center;gap:6px;height:36px;min-width:36px;padding:0 10px;border:1px solid transparent;border-radius:6px;background:none;cursor:pointer;font-size:13px}
+.tb:hover:not(:disabled){background:var(--surface-2);border-color:var(--line)}
+.tb:disabled{opacity:.38;cursor:default}
+.tb svg{width:18px;height:18px;flex:none}
+.tb[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+
+.main{flex:1;display:flex;min-height:0}
+.thumbs{width:150px;flex:none;border-right:1px solid var(--line);background:var(--surface-2);overflow:auto;padding:10px 0}
+.thumb{display:flex;flex-direction:column;align-items:center;gap:5px;width:100%;padding:7px 0;background:none;border:0;cursor:pointer}
+.mini{width:90px;height:127px;position:relative;outline:1px solid var(--line)}
+.thumb[aria-pressed="true"] .mini{outline:3px solid var(--accent)}
+.thumb.fresh .mini{animation:fresh 1.6s ease-out}
+@keyframes fresh{0%{box-shadow:0 0 0 8px var(--tag)}100%{box-shadow:0 0 0 0 transparent}}
+.thumb-meta{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}
+.chip{font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px;color:#fff;line-height:1.5}
+.t-base{background:#5B6573}.t-hwp{background:#1A7FA8}.t-xlsx{background:#1C7343}.t-docx{background:#34558F}.t-pdf{background:#B3322A}.t-jpg{background:#6B47A8}.t-div{background:#8A6D1F}
+.viewer{flex:1;background:var(--viewer);overflow:auto;min-width:0}
+.pages{display:flex;flex-direction:column;align-items:center;gap:20px;padding:24px 16px 40px}
+.slot{position:relative;flex:none}
+.slot.current{outline:3px solid var(--tag);outline-offset:5px}
+
+.panel{width:300px;flex:none;border-left:1px solid var(--line);background:var(--surface);overflow:auto;padding:16px}
+.panel h2{font-size:15px;margin:0 0 6px;font-weight:600}
+.panel .lead{color:var(--ink-2);font-size:12.5px;margin:0 0 14px}
+.panel h3{font-size:12px;color:var(--ink-2);font-weight:600;margin:16px 0 6px}
+.rules{list-style:none;margin:0 0 12px;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.rules li{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 10px;border-bottom:1px solid var(--line);font-size:13px}
+.rules li:last-child{border-bottom:0}
+.rules .ord{width:20px;color:var(--ink-2);font-size:12px}
+.rules .nm{flex:1}
+.ibtn{width:32px;height:32px;border:1px solid var(--line);border-radius:6px;background:var(--surface);cursor:pointer;display:grid;place-items:center}
+.ibtn:disabled{opacity:.3;cursor:default}
+.ibtn svg{width:14px;height:14px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.seg button{flex:1;height:38px;border:0;background:var(--surface);cursor:pointer;font-size:13px;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.field{margin:0 0 10px}
+.field label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:4px}
+.field input[type=text],.field input[type=number],.field select{width:100%;height:36px;border:1px solid var(--line);border-radius:6px;padding:0 10px;background:var(--surface)}
+.caps .field{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px}
+.caps .field label{margin:0;font-size:11px;white-space:nowrap}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;margin:0 0 8px}
+.chk input[type=text]{flex:1;height:34px;border:1px solid var(--line);border-radius:6px;padding:0 8px;background:var(--surface);min-width:0}
+.box{border-radius:6px;padding:10px 12px;font-size:12px;margin:0 0 12px;background:var(--surface-2);color:var(--ink-2)}
+.box.warn{background:var(--danger-soft);color:var(--ink)}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+.btn{height:38px;padding:0 16px;border-radius:6px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:13px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.order{list-style:none;margin:0;padding:0;counter-reset:o}
+.order li{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.order li::before{counter-increment:o;content:counter(o);width:22px;height:22px;border-radius:50%;background:var(--surface-3);display:grid;place-items:center;font-size:11px;font-weight:600;flex:none}
+.order li.done::before{background:var(--ok);color:#fff;content:"✓"}
+.conv{list-style:none;margin:10px 0 0;padding:0}
+.conv li{display:flex;gap:10px;align-items:center;padding:4px 0;color:var(--ink-2);font-size:13px}
+.conv .dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);flex:none}
+.conv li.run{color:var(--ink)}.conv li.run .dot{border-color:var(--accent);border-top-color:transparent;animation:spin .8s linear infinite}
+.conv li.done{color:var(--ink)}.conv li.done .dot{border-color:var(--ok);background:var(--ok)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status{display:flex;border-top:1px solid var(--line);background:var(--surface-2);font-size:12px;color:var(--ink-2)}
+.status span{padding:5px 12px;border-right:1px solid var(--line);white-space:nowrap}
+.status .msg{margin-left:auto;border-right:0;border-left:1px solid var(--line);color:var(--ink);overflow:hidden;text-overflow:ellipsis}
+
+/* 종이 */
+.pw{position:absolute;left:50%;top:50%;transform-origin:center}
+.paper{position:relative;width:420px;height:594px;background:var(--paper);color:var(--paper-ink);font-family:"Nanum Myeongjo","Batang",serif;padding:46px 42px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.paper h2{font-size:16px;margin:0 0 16px;font-weight:700}
+.paper p{font-size:11.5px;line-height:1.85;margin:0 0 6px}
+.paper table{border-collapse:collapse;width:100%;font-size:11px;margin:4px 0 14px}
+.paper td,.paper th{border:1px solid var(--paper-line);padding:6px 7px;text-align:left}
+.paper th{background:#EEF0F3;font-weight:700}
+.k-cover{display:flex;flex-direction:column;justify-content:center;text-align:center}
+.k-cover h1{font-size:25px;line-height:1.4;margin:0 0 50px;font-weight:700}
+.k-cover p{font-size:12.5px}
+.k-cover .rule{width:60px;height:2px;background:var(--paper-ink);margin:0 auto 40px}
+.k-excel th{background:#E3F0E8}
+.k-excel .sheet{font-family:"IBM Plex Sans KR",sans-serif;font-size:10px;color:#4A5563;margin-bottom:10px}
+.k-photo .ph{width:100%;height:330px;margin-bottom:14px;display:block}
+.k-photo .cap{text-align:center;font-size:12px}
+.k-drawing svg{width:100%;height:auto;display:block;margin-top:6px}
+.k-hwp h2{text-align:center;font-size:18px;letter-spacing:.2em;border-bottom:2px solid var(--paper-ink);padding-bottom:12px}
+.k-divider{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.k-divider .dv{border-top:2px solid var(--paper-ink);border-bottom:2px solid var(--paper-ink);padding:22px 10px;width:80%;font-size:22px;font-weight:700}
+.k-sheet{padding:34px 30px}
+.k-sheet h2{text-align:center;font-size:15px;margin-bottom:12px}
+.grid{display:grid;gap:0;border:1px solid var(--paper-line)}
+.grid .cell{border:1px solid var(--paper-line);display:flex;flex-direction:column}
+.grid .cell svg{display:block;width:100%;flex:1;min-height:0}
+.grid .cell .cp{font-size:10px;text-align:center;padding:4px;border-top:1px solid var(--paper-line);font-family:"IBM Plex Sans KR",sans-serif}
+.pn{position:absolute;font-size:10.5px;font-family:"Nanum Myeongjo",serif;color:var(--paper-ink)}
+.pn.bc{bottom:20px;left:0;right:0;text-align:center}
+.pn.br{bottom:20px;right:30px}
+.pn.tr{top:18px;right:30px}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:8px;font-size:13px;transition:.25s;pointer-events:none;z-index:200;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+@media (max-width: 960px){
+  html,body{height:auto}
+  .layout{grid-template-columns:1fr;height:auto;padding:12px;gap:12px}
+  .app{height:auto}
+  .main{flex-wrap:wrap}
+  .thumbs{width:100%;display:flex;overflow-x:auto;padding:8px;border-right:0;border-bottom:1px solid var(--line)}
+  .thumb{width:auto;padding:0 6px}
+  .mini{width:60px;height:85px}
+  .viewer{height:520px;flex-basis:100%}
+  .panel{width:100%;border-left:0;border-top:1px solid var(--line)}
+  .tb .lbl{display:none}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="guide" aria-label="사용설명서">
+    <div class="guide-head">
+      <h1>보고서 PDF 편집기<br>3단계 미리보기: 보고서 마무리</h1>
+      <p>첨부 파일을 넣고 난 뒤의 마무리 작업을 자동으로 해주는 기능이에요. 지금 화면은 첨부 파일을 순서 없이 넣어둔 상태예요. 위에서부터 차례로 해보세요.</p>
+      <div class="progress"><div class="bar"><span id="pbar"></span></div><span id="ptext"></span></div>
+    </div>
+    <ol class="steps" id="steps"></ol>
+    <div class="guide-foot">
+      <span>예상과 다른 부분은 단계 번호와 함께 알려주세요.</span>
+      <button class="btn-text" id="resetBtn">처음부터 다시</button>
+    </div>
+  </aside>
+
+  <section class="app" aria-label="시연 프로그램 화면">
+    <div class="titlebar"><b>보고서 PDF 편집기</b><span id="docname"></span></div>
+    <div class="toolbar" id="toolbar"></div>
+    <div class="main">
+      <div class="thumbs" id="thumbs" aria-label="페이지 썸네일"></div>
+      <div class="viewer" id="viewer"></div>
+      <aside class="panel" id="panel" aria-label="기능 설정"></aside>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let uid=0; const nid=()=>'p'+(++uid);
+
+const GROUPS=[
+  {key:'base', name:'보고서 본문'},
+  {key:'hwp', name:'한글 문서 (hwp)'},
+  {key:'xlsx', name:'엑셀 데이터 (xlsx)'},
+  {key:'pdf', name:'도면·PDF'},
+  {key:'docx', name:'워드 문서 (docx)'},
+  {key:'jpg', name:'현장 사진'}
+];
+const DIVNAME={'시설물개요서.hwp':'시설물 개요서','균열측정데이터.xlsx':'균열 측정 데이터','구조평면도.pdf':'구조 평면도','검토의견서.docx':'검토 의견서',photo:'현장 사진'};
+
+function startDoc(){
+  uid=0;
+  const P=(o)=>({id:nid(), ...o});
+  return [
+    P({kind:'cover', src:'base', title:'2026년 정기 안전점검 보고서', lines:['대상 시설물: ○○빌딩 (지상 8층, 지하 2층)','점검 일자: 2026. 10. 20.','점검 기관: [회사명]']}),
+    P({kind:'body', src:'base', title:'1. 점검 개요', lines:['점검 목적: 시설물의 안전 상태를 확인하고 보수 필요 여부를 판단한다.','점검 범위: 구조부, 외벽, 기계·전기 설비','측정 항목: 균열 폭, 콘크리트 반발경도','측정 장비: 균열 측정기, 슈미트해머']}),
+    P({kind:'table', src:'base', title:'2. 점검 결과 요약', table:[['구분','상태','등급'],['구조부','양호','B'],['외벽','부분 보수 필요','C'],['설비','양호','B']], lines:['상세 측정 결과는 첨부 2를 참조한다.']}),
+    P({kind:'body', src:'base', title:'3. 종합 의견', lines:['외벽 3층 북측에서 폭 0.3mm 균열이 확인되어 보수가 필요하다.','구조부와 설비는 전반적으로 양호한 상태이다.']}),
+    P({kind:'photo', src:'현장사진_01.jpg', title:'현장사진_01', seed:0}),
+    P({kind:'excel', src:'균열측정데이터.xlsx', title:'균열 측정 데이터', sheet:'균열측정데이터.xlsx / Sheet1', table:[['위치','균열 폭(mm)','길이(m)','판정'],['3층 북측 외벽','0.30','1.2','보수'],['2층 계단실','0.15','0.6','관찰'],['지하1층 주차장','0.10','0.8','관찰']], lines:[]}),
+    P({kind:'photo', src:'현장사진_02.jpg', title:'현장사진_02', seed:1}),
+    P({kind:'photo', src:'현장사진_03.jpg', title:'현장사진_03', seed:2}),
+    P({kind:'hwp', src:'시설물개요서.hwp', title:'시설물 개요서', table:[['항목','내용'],['시설물명','○○빌딩'],['준공 연도','2004년'],['구조 형식','철근콘크리트조'],['연면적','12,480㎡']]}),
+    P({kind:'drawing', src:'구조평면도.pdf', title:'구조 평면도 (1층)'}),
+    P({kind:'photo', src:'현장사진_04.jpg', title:'현장사진_04', seed:3}),
+    P({kind:'word', src:'검토의견서.docx', title:'검토 의견서', lines:['외벽 균열은 진행성 여부 확인을 위해 3개월 후 재측정이 필요하다.','보수 시 에폭시 주입 공법을 검토할 것.']})
+  ];
+}
+const REVISED={
+  '3. 종합 의견':['외벽 3층 북측에서 폭 0.35mm 균열이 확인되어 보수가 필요하다.','구조부와 설비는 전반적으로 양호한 상태이다.','보수는 에폭시 주입 공법을 적용하고, 보수 후 3개월 뒤 재측정한다.','다음 정기 점검 시 균열 진행 여부를 함께 확인할 것을 권고한다.'],
+  '1. 점검 개요':['점검 목적: 시설물의 안전 상태를 확인하고 보수 필요 여부를 판단한다.','점검 범위: 구조부, 외벽, 기계·전기 설비, 옥상 방수','측정 항목: 균열 폭, 콘크리트 반발경도','측정 장비: 균열 측정기, 슈미트해머, 열화상 카메라'],
+  '2. 점검 결과 요약':['상세 측정 결과는 첨부 2를 참조한다.','외벽 보수 계획은 종합 의견에 정리하였다.'],
+  '2026년 정기 안전점검 보고서':['대상 시설물: ○○빌딩 (지상 8층, 지하 2층)','점검 일자: 2026. 10. 22.','점검 기관: [회사명]']
+};
+
+const STEPS=[
+  {key:'preset', title:'첨부 순서 프리셋으로 정렬', doit:'도구 막대의 [순서 프리셋]을 누르세요. 오른쪽에 저장된 순서가 나오면 [이 순서로 정렬]을 누르세요. 위·아래 버튼으로 순서를 바꿔볼 수도 있어요.', real:'파일 종류로 묶고, 같은 종류 안에서는 파일 이름 순으로 정렬해요. 양식이 고정이라 한 번 저장해두면 매번 같은 순서로 맞춰져요.'},
+  {key:'sheet', title:'사진 대지 만들기', doit:'[사진 대지]를 누르고 한 쪽에 몇 장씩 넣을지 고르세요. 캡션을 고친 뒤 [사진 대지 만들기]를 누르면 사진 쪽이 대지로 바뀌어요.', real:'사진 쪽 여러 장이 표 형태의 대지 몇 쪽으로 줄어들어요. 캡션은 처음엔 파일 이름이고 직접 고칠 수 있어요.'},
+  {key:'divider', title:'간지 넣기', doit:'[간지]를 누르면 첨부 묶음마다 제목이 자동으로 만들어져요. 제목을 확인하고 [간지 넣기]를 누르세요.', real:'정렬된 순서대로 첨부 1, 첨부 2처럼 번호가 붙어요. 순서를 바꾼 뒤 다시 누르면 기존 간지를 지우고 새로 만들어요.'},
+  {key:'pagenum', title:'쪽번호 넣기', doit:'[쪽번호]를 누르고 위치와 형식을 고른 뒤 [쪽번호 넣기]를 누르세요.', real:'쪽 순서를 다 정한 뒤 마지막에 넣는 게 좋아요. 쪽을 옮기거나 지우면 번호가 자동으로 다시 매겨져요.'},
+  {key:'replace', title:'페이지 교체', doit:'왼쪽에서 4쪽(3. 종합 의견)을 고르고 [페이지 교체]를 누르세요. 원본 hwp의 같은 쪽을 다시 변환해 바꿔 끼워요.', real:'2단계 글자 수정으로는 어려운 긴 수정을 할 때 써요. 원본 hwp에서 고치고 저장한 뒤 이 버튼만 누르면 돼요.'}
+];
+
+let S;
+function fresh(){ return {pages:startDoc(), sel:null, tool:null, hist:[], fut:[], done:{}, active:'preset',
+  rules:GROUPS.map(g=>g.key), per:4, caps:{}, divs:null, pn:null, pnOpt:{pos:'bc', fmt:'dash', skipCover:true, hideDiv:true},
+  repPage:'', converting:false, msg:'첨부 파일을 넣어둔 상태예요', dirty:false}; }
+S=fresh();
+
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let toastT; function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+const clone=o=>JSON.parse(JSON.stringify(o));
+function record(){ S.hist.push(clone({pages:S.pages,pn:S.pn})); S.fut=[]; S.dirty=true; }
+function markDone(k){ if(S.done[k]) return; S.done[k]=true; const n=STEPS.find(s=>!S.done[s.key]); if(n && S.active===k) S.active=n.key; renderGuide(); if(!n) toast('3단계 시연을 모두 확인했어요'); }
+const extOf=p=>p.kind==='divider'?'div':p.kind==='sheet'?'jpg':p.src==='base'?'base':p.src.split('.').pop();
+const chipOf=p=>p.kind==='divider'?'간지':p.kind==='sheet'?'대지':p.src==='base'?'본문':extOf(p);
+
+/* ---------- 종이 ---------- */
+function photoSVG(seed, h){
+  const off=[0,40,-30,20][seed%4], tone=['#B9C1C9','#C4BBAF','#AFBAC4','#BDB4C6'][seed%4];
+  return '<svg class="ph" viewBox="0 0 336 '+(h||330)+'" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="336" height="330" fill="'+tone+'"/><rect y="210" width="336" height="120" fill="#9AA3AD"/><path d="M40 60H300V300H40Z" fill="#C9CFD5" stroke="#8E979F"/><path d="M'+(150+off)+' 70l12 50-14 50 18 60-11 60" fill="none" stroke="#4B5258" stroke-width="3"/></svg>';
+}
+function tableHTML(rows){ return '<table>'+rows.map((r,i)=>'<tr>'+r.map(c=>i===0?'<th>'+esc(c)+'</th>':'<td>'+esc(c)+'</td>').join('')+'</tr>').join('')+'</table>'; }
+function pnHTML(p,i){
+  if(!S.pn) return '';
+  const info=numbering()[i]; if(!info || info.hidden) return '';
+  const n=info.n, t=info.total;
+  const txt=S.pn.fmt==='dash'?'- '+n+' -':S.pn.fmt==='slash'?n+' / '+t:String(n);
+  return '<div class="pn '+S.pn.pos+'">'+txt+'</div>';
+}
+function numbering(){
+  const o=S.pn; const res=[]; let n=0;
+  const counted=S.pages.map((p,i)=>!(o.skipCover && i===0 && p.kind==='cover'));
+  const total=counted.filter(Boolean).length;
+  S.pages.forEach((p,i)=>{
+    if(!counted[i]){ res.push(null); return; }
+    n++; res.push({n,total,hidden:o.hideDiv && p.kind==='divider'});
+  });
+  return res;
+}
+function paperHTML(p,i){
+  const ps=(p.lines||[]).map(l=>'<p>'+esc(l)+'</p>').join('');
+  const pn=pnHTML(p,i);
+  switch(p.kind){
+    case 'cover': return '<div class="paper k-cover"><h1>'+esc(p.title)+'</h1><div class="rule"></div>'+ps+pn+'</div>';
+    case 'table': return '<div class="paper"><h2>'+esc(p.title)+'</h2>'+tableHTML(p.table)+ps+pn+'</div>';
+    case 'excel': return '<div class="paper k-excel"><div class="sheet">'+esc(p.sheet)+'</div><h2>'+esc(p.title)+'</h2>'+tableHTML(p.table)+pn+'</div>';
+    case 'hwp': return '<div class="paper k-hwp"><h2>'+esc(p.title)+'</h2>'+tableHTML(p.table)+pn+'</div>';
+    case 'photo': return '<div class="paper k-photo">'+photoSVG(p.seed)+'<p class="cap"><b>'+esc(p.title)+'</b></p>'+pn+'</div>';
+    case 'drawing': return '<div class="paper k-drawing"><h2>'+esc(p.title)+'</h2><svg viewBox="0 0 336 400" aria-hidden="true"><g fill="none" stroke="#2F5DA8" stroke-width="1.4"><rect x="10" y="10" width="316" height="380"/><path d="M10 140H326M10 270H326M118 10V390M226 10V390"/></g></svg>'+pn+'</div>';
+    case 'divider': return '<div class="paper k-divider"><div class="dv">'+esc(p.title)+'</div>'+pn+'</div>';
+    case 'sheet': {
+      const cols=2, rows=Math.ceil(p.per/2), cellH=Math.floor(470/rows);
+      const cells=[]; for(let k=0;k<p.per;k++){ const ph=p.photos[k];
+        cells.push('<div class="cell" style="height:'+cellH+'px">'+(ph?photoSVG(ph.seed,250)+'<div class="cp">'+esc(ph.cap)+'</div>':'')+'</div>'); }
+      return '<div class="paper k-sheet"><h2>사진 대지</h2><div class="grid" style="grid-template-columns:repeat('+cols+',1fr)">'+cells.join('')+'</div>'+pn+'</div>';
+    }
+    default: return '<div class="paper"><h2>'+esc(p.title)+'</h2>'+ps+pn+'</div>';
+  }
+}
+const wrap=(p,i,s)=>'<div class="pw" style="transform:translate(-50%,-50%) scale('+s+')">'+paperHTML(p,i)+'</div>';
+
+const ICON={
+  sort:'<path d="M4 6h10M4 12h7M4 18h4M17 4v16M14 17l3 3 3-3"/>',
+  grid:'<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>',
+  div:'<path d="M6 3h12v18H6z"/><path d="M9 11h6M9 14h6"/>',
+  hash:'<path d="M9 3 7 21M17 3l-2 18M4 8h17M3 16h17"/>',
+  swap:'<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>',
+  undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+  redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/>',
+  save:'<path d="M5 3h11l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 3v5h8V3M7 21v-7h10v7"/>',
+  up:'<path d="M12 19V5M5 12l7-7 7 7"/>', down:'<path d="M12 5v14M19 12l-7 7-7-7"/>'
+};
+const svg=n=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICON[n]+'</svg>';
+
+/* ---------- 렌더 ---------- */
+function renderToolbar(){
+  const T=(k,ic,l)=>'<button class="tb" data-tool="'+k+'" aria-pressed="'+(S.tool===k)+'">'+svg(ic)+'<span class="lbl">'+l+'</span></button>';
+  $('#toolbar').innerHTML=T('preset','sort','순서 프리셋')+T('sheet','grid','사진 대지')+T('divider','div','간지')+T('pagenum','hash','쪽번호')+T('replace','swap','페이지 교체')+
+    '<span class="sep"></span><button class="tb" data-act="undo" title="되돌리기" '+(S.hist.length?'':'disabled')+'>'+svg('undo')+'</button>'+
+    '<button class="tb" data-act="redo" title="다시 실행" '+(S.fut.length?'':'disabled')+'>'+svg('redo')+'</button>'+
+    '<span class="sep"></span><button class="tb" data-act="save">'+svg('save')+'<span class="lbl">저장</span></button>';
+}
+function renderThumbs(){
+  const small=matchMedia('(max-width:960px)').matches, s=(small?60:90)/420;
+  $('#thumbs').innerHTML=S.pages.map((p,i)=>'<button class="thumb'+(p.fresh?' fresh':'')+'" data-id="'+p.id+'" aria-pressed="'+(S.sel===p.id)+'" aria-label="'+(i+1)+'쪽 '+esc(p.title)+'"><div class="mini">'+wrap(p,i,s)+'</div><div class="thumb-meta"><span>'+(i+1)+'</span><span class="chip t-'+extOf(p)+'">'+chipOf(p)+'</span></div></button>').join('');
+  S.pages.forEach(p=>{ if(p.fresh) setTimeout(()=>{p.fresh=false;},1700); });
+}
+function renderViewer(){
+  const v=$('#viewer'); const z=Math.max(.5,Math.min(1,(v.clientWidth-48)/420));
+  v.innerHTML='<div class="pages">'+S.pages.map((p,i)=>'<div class="slot'+(S.sel===p.id?' current':'')+'" id="v-'+p.id+'" style="width:'+420*z+'px;height:'+594*z+'px">'+wrap(p,i,z)+'</div>').join('')+'</div>';
+}
+function renderStatus(){
+  $('#status').innerHTML='<span>총 '+S.pages.length+'쪽</span><span>'+(S.pn?'쪽번호 있음':'쪽번호 없음')+'</span><span class="msg">'+esc(S.msg)+'</span>';
+  $('#docname').textContent='— 2026_정기점검보고서_취합.pdf'+(S.dirty?' (수정됨)':'');
+}
+function renderGuide(){
+  const d=STEPS.filter(s=>S.done[s.key]).length;
+  $('#pbar').style.width=(d/STEPS.length*100)+'%'; $('#ptext').textContent=d+' / '+STEPS.length+' 완료';
+  $('#steps').innerHTML=STEPS.map((s,i)=>'<li class="step" data-done="'+!!S.done[s.key]+'" data-active="'+(S.active===s.key)+'"><button class="step-head" data-step="'+s.key+'" aria-expanded="'+(S.active===s.key)+'"><span class="num">'+(S.done[s.key]?'✓':i+1)+'</span><span class="step-title">'+s.title+'</span></button><div class="step-body"><p><strong>해보기</strong>'+s.doit+'</p><p class="real"><strong>실제 프로그램에서는</strong>'+s.real+'</p></div></li>').join('');
+}
+const photosNow=()=>S.pages.filter(p=>p.kind==='photo');
+function groupsNow(){
+  const gs=[]; let last=null;
+  S.pages.forEach(p=>{
+    if(p.src==='base' || p.kind==='divider') { last=null; return; }
+    const key=(p.kind==='photo'||p.kind==='sheet')?'photo':p.src;
+    if(key!==last){ gs.push({key, first:p.id}); last=key; }
+  });
+  return gs;
+}
+function renderPanel(){
+  const pn=$('#panel'); let h='';
+  switch(S.tool){
+    case null:
+      h='<h2>마무리 도구</h2><p class="lead">도구 막대에서 기능을 고르세요. 아래 순서대로 하면 가장 깔끔해요.</p><ol class="order">'+
+        STEPS.map(s=>'<li class="'+(S.done[s.key]?'done':'')+'">'+s.title+'</li>').join('')+'</ol>';
+      break;
+    case 'preset':
+      h='<h2>순서 프리셋</h2><p class="lead">파일 종류별로 묶어 아래 순서로 정렬해요.</p>'+
+        '<div class="field"><label for="presetSel">프리셋</label><select id="presetSel"><option>정기점검 기본</option></select></div>'+
+        '<ul class="rules">'+S.rules.map((k,i)=>{ const g=GROUPS.find(x=>x.key===k);
+          return '<li><span class="ord">'+(i+1)+'</span><span class="nm">'+g.name+'</span>'+
+          '<button class="ibtn" data-rule="'+i+'" data-dir="-1" aria-label="'+g.name+' 위로" '+(i===0?'disabled':'')+'>'+svg('up')+'</button>'+
+          '<button class="ibtn" data-rule="'+i+'" data-dir="1" aria-label="'+g.name+' 아래로" '+(i===S.rules.length-1?'disabled':'')+'>'+svg('down')+'</button></li>'; }).join('')+'</ul>'+
+        '<p class="box">같은 종류 안에서는 파일 이름 순서로 놓여요. 간지와 사진 대지도 해당 묶음과 함께 움직여요.</p>'+
+        '<div class="actions"><button class="btn" data-act="presetSave">현재 순서를 프리셋으로 저장</button><button class="btn primary" data-act="presetApply">이 순서로 정렬</button></div>';
+      break;
+    case 'sheet': {
+      const ph=photosNow();
+      if(!ph.length){ h='<h2>사진 대지</h2><p class="lead">사진 쪽이 없어요. 이미 대지로 만들었다면 되돌리기로 다시 해볼 수 있어요.</p>'; break; }
+      const pages=Math.ceil(ph.length/S.per);
+      h='<h2>사진 대지</h2><p class="lead">사진 '+ph.length+'장을 찾았어요. 한 쪽에 몇 장씩 넣을까요?</p>'+
+        '<div class="seg" role="group" aria-label="한 쪽에 넣을 사진 수">'+[2,4,6].map(n=>'<button data-per="'+n+'" aria-pressed="'+(S.per===n)+'">'+n+'장</button>').join('')+'</div>'+
+        '<p class="box">사진 '+ph.length+'쪽 → 대지 '+pages+'쪽으로 줄어들어요.</p>'+
+        '<h3>캡션</h3><div class="caps">'+ph.map(p=>'<div class="field"><label for="cap-'+p.id+'">'+esc(p.title)+'</label><input type="text" id="cap-'+p.id+'" data-cap="'+p.id+'" value="'+esc(S.caps[p.id]!=null?S.caps[p.id]:p.title)+'"></div>').join('')+'</div>'+
+        '<div class="actions"><button class="btn primary" data-act="sheetApply">사진 대지 만들기</button></div>';
+      break;
+    }
+    case 'divider': {
+      const gs=groupsNow();
+      if(!S.divs || S.divs.length!==gs.length) S.divs=gs.map((g,i)=>({on:true, title:'첨부 '+(i+1)+'. '+(DIVNAME[g.key]||g.key)}));
+      h='<h2>간지</h2><p class="lead">지금 순서에서 첨부 묶음 '+gs.length+'개를 찾았어요. 제목을 확인하세요.</p>'+
+        gs.map((g,i)=>'<label class="chk"><input type="checkbox" data-divon="'+i+'" '+(S.divs[i].on?'checked':'')+' aria-label="간지 '+(i+1)+' 넣기"><input type="text" data-divt="'+i+'" value="'+esc(S.divs[i].title)+'" aria-label="간지 '+(i+1)+' 제목"></label>').join('')+
+        (S.done.preset?'':'<p class="box warn">순서 프리셋으로 먼저 정렬하면 묶음이 깔끔하게 나뉘어요.</p>')+
+        '<div class="actions"><button class="btn primary" data-act="divApply">간지 넣기</button></div>';
+      break;
+    }
+    case 'pagenum': {
+      const o=S.pnOpt;
+      const sample=o.fmt==='dash'?'- 3 -':o.fmt==='slash'?'3 / '+S.pages.length:'3';
+      h='<h2>쪽번호</h2><p class="lead">쪽 순서를 모두 정한 뒤 넣는 걸 권해요.</p>'+
+        '<div class="field"><label for="pnPos">위치</label><select id="pnPos"><option value="bc"'+(o.pos==='bc'?' selected':'')+'>아래 가운데</option><option value="br"'+(o.pos==='br'?' selected':'')+'>아래 오른쪽</option><option value="tr"'+(o.pos==='tr'?' selected':'')+'>위 오른쪽</option></select></div>'+
+        '<div class="field"><label>형식</label></div><div class="seg" role="group" aria-label="쪽번호 형식">'+[['dash','- 3 -'],['slash','3 / 전체'],['plain','3']].map(([k,l])=>'<button data-fmt="'+k+'" aria-pressed="'+(o.fmt===k)+'">'+l+'</button>').join('')+'</div>'+
+        '<label class="chk"><input type="checkbox" id="pnSkip" '+(o.skipCover?'checked':'')+'> 표지는 번호 없이, 다음 쪽부터 1</label>'+
+        '<label class="chk"><input type="checkbox" id="pnHide" '+(o.hideDiv?'checked':'')+'> 간지에는 번호 숨기기 (번호는 셈)</label>'+
+        '<p class="box">미리보기: '+sample+'</p>'+
+        '<div class="actions">'+(S.pn?'<button class="btn" data-act="pnRemove">쪽번호 지우기</button>':'')+'<button class="btn primary" data-act="pnApply">'+(S.pn?'다시 넣기':'쪽번호 넣기')+'</button></div>';
+      break;
+    }
+    case 'replace': {
+      const p=S.pages.find(x=>x.id===S.sel);
+      h='<h2>페이지 교체</h2><p class="lead">원본 hwp에서 고친 쪽을 다시 변환해 바꿔 끼워요.</p>';
+      if(!p){ h+='<p class="box">왼쪽 썸네일에서 바꿀 쪽을 먼저 고르세요.</p>'; break; }
+      const idx=S.pages.indexOf(p);
+      if(p.src!=='base'){ h+='<p class="box warn">'+(idx+1)+'쪽은 첨부 파일에서 온 쪽이에요. 본문 hwp에서 만든 쪽만 교체할 수 있어요. 첨부 쪽은 고친 파일을 다시 넣어주세요.</p>'; break; }
+      const baseIdx=S.pages.filter(x=>x.src==='base').indexOf(p)+1;
+      h+='<dl style="display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:12.5px;margin:0 0 12px"><dt style="color:var(--ink-2)">바꿀 쪽</dt><dd style="margin:0">'+(idx+1)+'쪽 ('+esc(p.title)+')</dd><dt style="color:var(--ink-2)">원본 파일</dt><dd style="margin:0">2026_정기점검보고서.hwp</dd></dl>'+
+        '<div class="field"><label for="repNum">원본 hwp에서 가져올 쪽</label><input type="number" id="repNum" min="1" max="4" value="'+(S.repPage||baseIdx)+'"></div>'+
+        '<p class="box">본문 '+baseIdx+'번째 쪽이라 hwp의 '+baseIdx+'쪽을 자동으로 골랐어요. hwp에서 쪽이 늘었다면 숫자를 바꾸세요.</p>'+
+        '<ul class="conv" id="conv"></ul>'+
+        '<div class="actions"><button class="btn primary" data-act="repGo" '+(S.converting?'disabled':'')+'>교체</button></div>';
+      break;
+    }
+  }
+  pn.innerHTML=h;
+}
+function render(){ renderToolbar(); renderThumbs(); renderViewer(); renderPanel(); renderStatus(); }
+function scrollTo(id){ const el=document.getElementById('v-'+id); if(el) el.scrollIntoView({block:'start',behavior:reduceMotion?'auto':'smooth'}); }
+
+/* ---------- 기능 ---------- */
+function presetApply(){
+  const rank=p=>{ const k=p.kind==='divider'?null:extOf(p); return S.rules.indexOf(k==='jpg'?'jpg':k); };
+  // 간지는 바로 뒤 묶음과 함께 움직임
+  const items=[]; let pendingDiv=null;
+  S.pages.forEach(p=>{ if(p.kind==='divider'){ pendingDiv=p; return; } items.push({p, div:pendingDiv}); pendingDiv=null; });
+  const sorted=items.map((it,i)=>({...it,i})).sort((a,b)=>{
+    const ra=rank(a.p), rb=rank(b.p); if(ra!==rb) return ra-rb;
+    if(a.p.src==='base') return a.i-b.i;
+    return a.p.src.localeCompare(b.p.src,'ko') || a.i-b.i;
+  });
+  const out=[]; const seen=new Set();
+  sorted.forEach(it=>{ if(it.div && !seen.has(it.div.id)){ out.push(it.div); seen.add(it.div.id);} out.push(it.p); });
+  if(out.every((p,i)=>p===S.pages[i])){ toast('이미 프리셋 순서예요'); markDone('preset'); return; }
+  record(); S.pages=out; S.pages.forEach(p=>{ if(p.src!=='base') p.fresh=true; });
+  S.divs=null; S.msg='정기점검 기본 프리셋으로 정렬했어요'; render(); markDone('preset'); toast('프리셋 순서로 정렬했어요');
+}
+function sheetApply(){
+  const ph=photosNow(); if(!ph.length) return;
+  record();
+  const first=S.pages.findIndex(p=>p.kind==='photo');
+  const photos=ph.map(p=>({seed:p.seed, cap:S.caps[p.id]!=null?S.caps[p.id]:p.title}));
+  const sheets=[]; for(let i=0;i<photos.length;i+=S.per) sheets.push({id:nid(), kind:'sheet', src:'사진대지', title:'사진 대지 '+(sheets.length+1), per:S.per, photos:photos.slice(i,i+S.per), fresh:true});
+  const rest=S.pages.filter(p=>p.kind!=='photo');
+  const before=S.pages.slice(0,first).filter(p=>p.kind!=='photo').length;
+  S.pages=[...rest.slice(0,before),...sheets,...rest.slice(before)];
+  S.divs=null; S.msg='사진 '+photos.length+'장을 대지 '+sheets.length+'쪽으로 만들었어요';
+  render(); scrollTo(sheets[0].id); markDone('sheet'); toast('사진 대지를 만들었어요');
+}
+function divApply(){
+  const gs=groupsNow(); record();
+  let pages=S.pages.filter(p=>p.kind!=='divider');
+  const firstIds=gs.map(g=>g.first);
+  const out=[];
+  pages.forEach(p=>{ const gi=firstIds.indexOf(p.id); if(gi>-1 && S.divs[gi] && S.divs[gi].on) out.push({id:nid(),kind:'divider',src:'간지',title:S.divs[gi].title,fresh:true}); out.push(p); });
+  S.pages=out; S.msg='간지 '+S.divs.filter(d=>d.on).length+'장을 넣었어요';
+  render(); markDone('divider'); toast('간지를 넣었어요');
+}
+function pnApply(){ record(); S.pn={...S.pnOpt}; S.msg='쪽번호를 넣었어요'; render(); markDone('pagenum'); toast('쪽번호를 넣었어요'); }
+function repGo(){
+  const p=S.pages.find(x=>x.id===S.sel); if(!p||S.converting) return;
+  S.converting=true;
+  const steps=['한글을 백그라운드에서 실행','원본 hwp의 해당 쪽만 PDF로 변환','기존 쪽과 바꿔 끼우기'];
+  const ul=$('#conv'); ul.innerHTML=steps.map(s=>'<li><span class="dot"></span>'+s+'</li>').join('');
+  document.querySelector('[data-act="repGo"]').disabled=true;
+  const lis=[...ul.children]; let k=0;
+  const tick=()=>{
+    if(k>0) lis[k-1].className='done';
+    if(k<lis.length){ lis[k].className='run'; k++; setTimeout(tick,reduceMotion?200:550); }
+    else setTimeout(()=>{
+      record();
+      const i=S.pages.indexOf(p);
+      const np={...clone(p), id:nid(), fresh:true};
+      if(REVISED[p.title]) np.lines=REVISED[p.title];
+      S.pages[i]=np; S.sel=np.id; S.converting=false;
+      S.msg=(i+1)+'쪽을 원본 hwp의 새 내용으로 바꿨어요';
+      render(); scrollTo(np.id); markDone('replace'); toast((i+1)+'쪽을 바꿨어요');
+    },250);
+  };
+  tick();
+}
+function undo(){ if(!S.hist.length) return; S.fut.push(clone({pages:S.pages,pn:S.pn})); const s=S.hist.pop(); S.pages=s.pages; S.pn=s.pn; S.divs=null; S.msg='되돌렸어요'; render(); }
+function redo(){ if(!S.fut.length) return; S.hist.push(clone({pages:S.pages,pn:S.pn})); const s=S.fut.pop(); S.pages=s.pages; S.pn=s.pn; S.divs=null; S.msg='다시 실행했어요'; render(); }
+
+/* ---------- 이벤트 ---------- */
+document.addEventListener('click',e=>{
+  const st=e.target.closest('[data-step]'); if(st){ S.active=st.dataset.step; renderGuide(); return; }
+  const tl=e.target.closest('[data-tool]'); if(tl){ S.tool=S.tool===tl.dataset.tool?null:tl.dataset.tool; renderToolbar(); renderPanel(); return; }
+  const th=e.target.closest('.thumb'); if(th){ S.sel=th.dataset.id; renderThumbs(); renderViewer(); renderPanel(); scrollTo(S.sel); return; }
+  const rb=e.target.closest('[data-rule]'); if(rb){ const i=+rb.dataset.rule, d=+rb.dataset.dir; const r=S.rules; [r[i],r[i+d]]=[r[i+d],r[i]]; renderPanel(); return; }
+  const pb=e.target.closest('[data-per]'); if(pb){ S.per=+pb.dataset.per; renderPanel(); return; }
+  const fb=e.target.closest('[data-fmt]'); if(fb){ S.pnOpt.fmt=fb.dataset.fmt; renderPanel(); return; }
+  const a=e.target.closest('[data-act]'); if(!a||a.disabled) return;
+  switch(a.dataset.act){
+    case 'presetApply': presetApply(); break;
+    case 'presetSave': toast('정기점검 기본 프리셋을 저장했어요'); break;
+    case 'sheetApply': sheetApply(); break;
+    case 'divApply': divApply(); break;
+    case 'pnApply': pnApply(); break;
+    case 'pnRemove': record(); S.pn=null; S.msg='쪽번호를 지웠어요'; render(); break;
+    case 'repGo': repGo(); break;
+    case 'undo': undo(); break;
+    case 'redo': redo(); break;
+    case 'save': S.dirty=false; S.msg='2026_정기점검보고서_최종.pdf로 저장했어요'; renderStatus(); toast('다른 이름으로 저장했어요'); break;
+  }
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.cap){ S.caps[t.dataset.cap]=t.value; }
+  if(t.dataset.divt){ S.divs[+t.dataset.divt].title=t.value; }
+  if(t.id==='repNum'){ S.repPage=t.value; }
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.divon){ S.divs[+t.dataset.divon].on=t.checked; }
+  if(t.id==='pnPos'){ S.pnOpt.pos=t.value; }
+  if(t.id==='pnSkip'){ S.pnOpt.skipCover=t.checked; }
+  if(t.id==='pnHide'){ S.pnOpt.hideDiv=t.checked; }
+});
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,select,textarea')) return;
+  const mod=e.ctrlKey||e.metaKey;
+  if(mod && e.key.toLowerCase()==='z' && !e.shiftKey){ e.preventDefault(); undo(); }
+  else if(mod && (e.key.toLowerCase()==='y'||(e.key.toLowerCase()==='z'&&e.shiftKey))){ e.preventDefault(); redo(); }
+});
+$('#resetBtn').addEventListener('click',()=>{ S=fresh(); render(); renderGuide(); toast('처음 상태로 돌아왔어요'); });
+let rT; window.addEventListener('resize',()=>{ clearTimeout(rT); rT=setTimeout(renderViewer,150); });
+
+render(); renderGuide();
+})();
+</script>
+</body>
+</html>

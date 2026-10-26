@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>보고서 PDF 편집기 2단계 시연</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Nanum+Myeongjo:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#E6EAEE; --surface:#FFFFFF; --surface-2:#F3F5F8; --surface-3:#E9EDF2;
+  --ink:#1B2430; --ink-2:#4F5A68; --line:#CDD4DC;
+  --accent:#2457B3; --accent-ink:#FFFFFF; --accent-soft:#DCE6F7;
+  --tag:#F2C230; --tag-ink:#1B2430; --danger:#B3322A; --danger-soft:#F8E1DE; --ok:#1C7343; --ok-soft:#DDF0E4;
+  --viewer:#7F8893; --paper:#FFFFFF; --paper-ink:#23262B; --paper-line:#C9CDD3; --edit:#E07A1F;
+  color-scheme: light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#11161C; --surface:#1A2129; --surface-2:#212933; --surface-3:#29323D;
+    --ink:#E5E9EE; --ink-2:#A7B1BD; --line:#36404C;
+    --accent:#7BA5F2; --accent-ink:#0C1422; --accent-soft:#25344D;
+    --danger:#F08A80; --danger-soft:#3A2224; --ok:#6FCB94; --ok-soft:#1C3326; --viewer:#0C1015;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#11161C; --surface:#1A2129; --surface-2:#212933; --surface-3:#29323D;
+  --ink:#E5E9EE; --ink-2:#A7B1BD; --line:#36404C;
+  --accent:#7BA5F2; --accent-ink:#0C1422; --accent-soft:#25344D;
+  --danger:#F08A80; --danger-soft:#3A2224; --ok:#6FCB94; --ok-soft:#1C3326; --viewer:#0C1015;
+  color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;height:100%;background:var(--ground);color:var(--ink);font-family:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:14px;line-height:1.5}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.layout{display:grid;grid-template-columns:340px minmax(0,1fr);gap:20px;height:100%;padding:20px;max-width:1600px;margin:0 auto}
+
+.guide{background:var(--surface);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.guide-head{padding:22px 22px 16px;border-bottom:1px solid var(--line)}
+.guide-head h1{font-size:20px;line-height:1.35;margin:0 0 8px;font-weight:600}
+.guide-head p{margin:0;color:var(--ink-2);font-size:13px}
+.progress{margin-top:14px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2)}
+.bar{flex:1;height:6px;background:var(--surface-3);border-radius:3px;overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:var(--ok);transition:width .3s}
+.steps{list-style:none;margin:0;padding:10px 12px;overflow:auto;flex:1}
+.step{border-radius:8px;margin-bottom:4px}
+.step-head{width:100%;display:flex;align-items:center;gap:12px;padding:10px;background:none;border:0;border-radius:8px;cursor:pointer;text-align:left;min-height:44px}
+.step-head:hover{background:var(--surface-2)}
+.num{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:600;font-size:13px;background:var(--surface-3);color:var(--ink-2)}
+.step[data-active="true"]{background:var(--surface-2)}
+.step[data-active="true"] .num{background:var(--tag);color:var(--tag-ink)}
+.step[data-done="true"] .num{background:var(--ok);color:#fff}
+.step-title{flex:1;font-weight:500}
+.step-body{display:none;padding:0 12px 14px 50px;font-size:13px}
+.step[data-active="true"] .step-body{display:block}
+.step-body p{margin:0 0 10px}
+.step-body strong{display:block;font-weight:600;font-size:12px;color:var(--ink-2);margin-bottom:2px}
+.step-body .real{padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:6px}
+.guide-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;color:var(--ink-2)}
+.btn-text{background:none;border:1px solid var(--line);border-radius:6px;padding:8px 12px;cursor:pointer;min-height:36px;white-space:nowrap}
+.btn-text:hover{background:var(--surface-2)}
+
+.app{background:var(--surface);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;overflow:hidden;box-shadow:0 12px 32px -18px rgba(20,30,45,.45)}
+.titlebar{display:flex;align-items:center;gap:10px;height:38px;padding:0 14px;background:var(--surface-2);border-bottom:1px solid var(--line);font-size:13px}
+.titlebar b{font-weight:600}
+.titlebar span{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.toolbar{display:flex;align-items:center;gap:4px;padding:6px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tb{display:inline-flex;align-items:center;gap:6px;height:36px;min-width:36px;padding:0 10px;border:1px solid transparent;border-radius:6px;background:none;cursor:pointer;font-size:13px}
+.tb:hover:not(:disabled){background:var(--surface-2);border-color:var(--line)}
+.tb:disabled{opacity:.38;cursor:default}
+.tb svg{width:18px;height:18px;flex:none}
+.tb[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.tb.big{border-color:var(--line)}
+.sep{width:1px;height:22px;background:var(--line);margin:0 4px}
+
+.main{flex:1;display:flex;min-height:0}
+.thumbs{width:140px;flex:none;border-right:1px solid var(--line);background:var(--surface-2);overflow:auto;padding:12px 0}
+.thumb{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;padding:8px 0;background:none;border:0;cursor:pointer}
+.mini{width:96px;height:128px;position:relative;outline:1px solid var(--line)}
+.thumb[aria-pressed="true"] .mini{outline:3px solid var(--accent)}
+.thumb span{font-size:12px;color:var(--ink-2)}
+.viewer{flex:1;background:var(--viewer);overflow:auto;display:grid;place-items:center;padding:24px;min-width:0}
+.slot{position:relative;flex:none}
+.viewer.tool .slot{cursor:crosshair;touch-action:none}
+.marquee{position:absolute;border:1.5px dashed var(--accent);background:rgba(36,87,179,.12);pointer-events:none;z-index:4}
+
+.panel{width:290px;flex:none;border-left:1px solid var(--line);background:var(--surface);overflow:auto;padding:16px}
+.panel h2{font-size:14px;margin:0 0 12px;font-weight:600}
+.panel .hint{color:var(--ink-2);font-size:13px;margin:0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:12px;margin:0 0 14px}
+.kv dt{color:var(--ink-2)}
+.kv dd{margin:0;word-break:break-all}
+.okmark{color:var(--ok);font-weight:600}
+.box{border-radius:6px;padding:10px 12px;font-size:12px;margin:0 0 12px}
+.box.warn{background:var(--danger-soft);color:var(--ink)}
+.box.warn b{color:var(--danger)}
+.box.info{background:var(--surface-2);color:var(--ink-2)}
+.box.ok{background:var(--ok-soft)}
+.field{margin:0 0 12px}
+.field label{display:block;font-size:12px;color:var(--ink-2);margin-bottom:4px}
+.field input[type=text],.field select{width:100%;height:38px;border:1px solid var(--line);border-radius:6px;padding:0 10px;background:var(--surface)}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink-2);margin:-4px 0 12px}
+.prev{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 14px}
+.prev div{border:1px solid var(--line);border-radius:6px;padding:8px;background:#fff;color:#23262B;min-height:56px}
+.prev small{display:block;font-family:"IBM Plex Sans KR",sans-serif;font-size:11px;color:#5A6472;margin-bottom:4px}
+.prev p{margin:0;font-size:14px;word-break:break-all}
+.actions{display:flex;gap:8px;justify-content:flex-end}
+.btn{height:38px;padding:0 16px;border-radius:6px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:13px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.edits{list-style:none;margin:0;padding:0;font-size:12px}
+.edits li{padding:8px 0;border-bottom:1px solid var(--line)}
+.edits s{color:var(--ink-2)}
+.status{display:flex;border-top:1px solid var(--line);background:var(--surface-2);font-size:12px;color:var(--ink-2)}
+.status span{padding:5px 12px;border-right:1px solid var(--line);white-space:nowrap}
+.status .msg{margin-left:auto;border-right:0;border-left:1px solid var(--line);color:var(--ink);overflow:hidden;text-overflow:ellipsis}
+
+/* 종이 */
+.pw{position:absolute;left:50%;top:50%;transform-origin:center}
+.paper{width:420px;height:594px;background:var(--paper);color:var(--paper-ink);font-family:"Nanum Myeongjo","Batang",serif;padding:46px 42px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.paper h2{font-size:16px;margin:0 0 16px;font-weight:700}
+.paper p{font-size:11.5px;line-height:1.85;margin:0 0 6px}
+.paper table{border-collapse:collapse;width:100%;font-size:11px;margin:4px 0 14px}
+.paper td,.paper th{border:1px solid var(--paper-line);padding:6px 7px;text-align:left}
+.paper th{background:#EEF0F3;font-family:"IBM Plex Sans KR",sans-serif;font-weight:600}
+.k-cover{display:flex;flex-direction:column;justify-content:center;text-align:center}
+.k-cover h1{font-size:25px;line-height:1.4;margin:0 0 50px;font-family:"IBM Plex Sans KR",sans-serif;font-weight:600;letter-spacing:-.02em}
+.k-cover p{font-size:12.5px}
+.k-cover .rule{width:60px;height:2px;background:var(--paper-ink);margin:0 auto 40px}
+.sp{border-radius:2px}
+.viewer.tool .sp:hover{outline:1px solid rgba(36,87,179,.6);background:rgba(36,87,179,.06)}
+.sp.sel{outline:2px solid #2457B3;background:rgba(36,87,179,.14)}
+.viewer.compare .sp.ed{outline:1.5px dashed var(--edit);outline-offset:1px;background:rgba(224,122,31,.10)}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:8px;font-size:13px;transition:.25s;pointer-events:none;z-index:200;max-width:calc(100vw - 32px)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+@media (max-width: 960px){
+  html,body{height:auto}
+  .layout{grid-template-columns:1fr;height:auto;padding:12px;gap:12px}
+  .app{height:auto}
+  .main{flex-wrap:wrap}
+  .thumbs{width:100%;display:flex;overflow-x:auto;padding:8px;border-right:0;border-bottom:1px solid var(--line)}
+  .thumb{width:auto;padding:0 8px}
+  .mini{width:64px;height:86px}
+  .viewer{height:520px;flex-basis:100%}
+  .panel{width:100%;border-left:0;border-top:1px solid var(--line)}
+  .tb .lbl{display:none}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="guide" aria-label="사용설명서">
+    <div class="guide-head">
+      <h1>보고서 PDF 편집기<br>2단계 미리보기: 글자 수정</h1>
+      <p>한글로 만든 보고서 PDF에서 날짜·수치·오타를 바로 고치는 기능이에요. 안내를 따라 직접 해보세요. 화면의 PDF는 시연용이라 실제 파일은 바뀌지 않아요.</p>
+      <div class="progress"><div class="bar"><span id="pbar"></span></div><span id="ptext"></span></div>
+    </div>
+    <ol class="steps" id="steps"></ol>
+    <div class="guide-foot">
+      <span>예상과 다른 부분은 단계 번호와 함께 알려주세요.</span>
+      <button class="btn-text" id="resetBtn">처음부터 다시</button>
+    </div>
+  </aside>
+
+  <section class="app" aria-label="시연 프로그램 화면">
+    <div class="titlebar"><b>보고서 PDF 편집기</b><span id="docname"></span></div>
+    <div class="toolbar" id="toolbar"></div>
+    <div class="main">
+      <div class="thumbs" id="thumbs" aria-label="페이지 썸네일"></div>
+      <div class="viewer" id="viewer"></div>
+      <aside class="panel" id="panel" aria-label="글자 수정 패널"></aside>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const SERIF='"Nanum Myeongjo",Batang,serif', SANS='"IBM Plex Sans KR","Malgun Gothic",sans-serif';
+
+/* PDF 안 글꼴 → PC 글꼴 연결표 */
+const FONTMAP={
+  'HCRBatang':{name:'함초롬바탕', file:'HCRBatang.ttf', css:SERIF, w:400},
+  'HCRBatang-Bold':{name:'함초롬바탕 굵게', file:'HCRBatangBold.ttf', css:SERIF, w:700},
+  'HCRDotum-Bold':{name:'함초롬돋움 굵게', file:'HCRDotumBold.ttf', css:SANS, w:600}
+};
+const PCFONTS=[{name:'함초롬돋움 굵게',css:SANS,w:600},{name:'맑은 고딕 굵게',css:SANS,w:600},{name:'함초롬바탕 굵게',css:SERIF,w:700}];
+const FMETA={
+  title:{pdf:'GHIJKL+HYHeadLine-Medium', key:'HYHeadLine-Medium', size:25},
+  h:{pdf:'ABCDEF+HCRBatang-Bold', key:'HCRBatang-Bold', size:16},
+  b:{pdf:'ABCDEF+HCRBatang', key:'HCRBatang', size:11.5},
+  th:{pdf:'MNOPQR+HCRDotum-Bold', key:'HCRDotum-Bold', size:11},
+  td:{pdf:'ABCDEF+HCRBatang', key:'HCRBatang', size:11}
+};
+
+let sid=0;
+const sp=(t,f)=>({id:'s'+(++sid), t, f:f||'b'});
+function makeDoc(){
+  sid=0;
+  const d=[
+    {kind:'cover', title:[sp('2026년 정기 안전점검 보고서','title')], lines:[[sp('대상 시설물: '),sp('○○빌딩'),sp(' (지상 8층, 지하 2층)')],[sp('점검 일자: '),sp('2026. 10. 20.')],[sp('점검 기관: '),sp('[회사명]')]]},
+    {kind:'body', title:[sp('1. 점검 개요','h')], lines:[[sp('점검 목적: 시설물의 안전 상태를 확인하고 보수 필요 여부를 판단한다.')],[sp('점검 범위: '),sp('구조부, 외벽, 기계·전기 설비')],[sp('측정 항목: '),sp('균열 폭, 콘크리트 반발경도')],[sp('점검 기간: '),sp('2026. 10. 20.'),sp(' ~ '),sp('2026. 10. 21.')]]},
+    {kind:'table', title:[sp('2. 점검 결과 요약','h')], table:[[sp('구분','th'),sp('상태','th'),sp('등급','th')],[sp('구조부','td'),sp('양호','td'),sp('B','td')],[sp('외벽','td'),sp('부분 보수 필요','td'),sp('C','td')],[sp('설비','td'),sp('양호','td'),sp('B','td')]], lines:[[sp('상세 측정 결과는 첨부 1을 참조한다.')]]},
+    {kind:'body', title:[sp('3. 종합 의견','h')], lines:[[sp('외벽 3층 북측에서 폭 '),sp('0.3mm'),sp(' 균열이 확인되어 보수가 필요하다.')],[sp('구조부와 설비는 전반적으로 양호한 상태이다.')],[sp('다음 정기 점검 시 균열 진행 여부를 재측정할 것을 권고한다.')]]}
+  ];
+  d.forEach((p,pi)=>{
+    p.title.forEach(s=>s.ln=pi+'t');
+    p.lines.forEach((l,li)=>l.forEach(s=>s.ln=pi+'l'+li));
+    (p.table||[]).forEach((r,ri)=>r.forEach((s,ci)=>s.ln=pi+'c'+ri+'_'+ci));
+  });
+  return d;
+}
+
+const STEPS=[
+  {key:'tool', title:'글자 수정 도구 켜기', doit:'도구 막대의 [글자 수정]을 누르세요. 글자 위에 마우스를 올리면 고칠 수 있는 단위가 표시돼요.', real:'도구가 켜진 동안 마우스는 글자를 고르는 데만 쓰여요. 다시 누르면 꺼져요.'},
+  {key:'select', title:'고칠 부분 드래그', doit:'표지의 점검 일자 2026. 10. 20. 주위를 드래그해서 감싸세요. 휴대폰에서는 글자를 눌러도 돼요.', real:'PDF 안에서 글자의 위치, 글꼴, 크기, 색상을 읽어 오른쪽 패널에 보여줘요.'},
+  {key:'apply', title:'새 값 입력하고 적용', doit:'오른쪽 패널에서 자동으로 찾은 글꼴과 크기를 확인하고, 새 날짜를 입력해 미리보기를 본 뒤 [적용]을 누르세요.', real:'원래 글자를 지우고 같은 자리에 PC에 설치된 함초롬바탕으로 새 글자를 써넣어요. 표 선과 배경, 이미지는 그대로 남아요.'},
+  {key:'font', title:'글꼴을 못 찾는 경우', doit:'표지 제목을 골라보세요. PDF 안 글꼴을 PC에서 찾지 못하면 비슷한 글꼴을 고르라고 안내해요.', real:'고른 글꼴은 글꼴 연결표에 저장해서, 다음부터는 묻지 않고 자동으로 써요.'},
+  {key:'long', title:'너무 긴 수정', doit:'4쪽 종합 의견의 0.3mm를 골라 긴 문장을 입력해보세요.', real:'PDF는 글자가 뒤로 밀리지 않아서, 원래보다 많이 길면 뒤 글자와 겹쳐요. 이런 수정은 원본 hwp에서 고친 뒤 3단계의 페이지 교체로 바꾸는 게 깔끔해요.'},
+  {key:'compare', title:'수정 표시와 되돌리기', doit:'[수정 표시]를 눌러 고친 곳을 확인해보고, 되돌리기도 눌러보세요. 마지막으로 [저장]을 누르세요.', real:'수정 표시는 화면에서만 보이고 저장한 PDF에는 남지 않아요. 원본은 그대로 두고 다른 이름으로 저장해요.'}
+];
+
+let S;
+function fresh(){ return {doc:makeDoc(), page:0, tool:false, compare:false, sel:[], multiNote:false, hist:[], fut:[], done:{}, active:'tool', pick:0, remember:true, learned:{}, msg:'보고서를 열었어요', dirty:false, input:''}; }
+S=fresh();
+
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let toastT; function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+const allSpans=()=>{ const a=[]; S.doc.forEach((p,pi)=>{ p.title.forEach(s=>a.push([s,pi])); p.lines.flat().forEach(s=>a.push([s,pi])); (p.table||[]).flat().forEach(s=>a.push([s,pi])); }); return a; };
+const findSpan=id=>{ for(const [s] of allSpans()) if(s.id===id) return s; return null; };
+const clone=d=>JSON.parse(JSON.stringify(d));
+function record(){ S.hist.push(clone(S.doc)); S.fut=[]; S.dirty=true; }
+function markDone(k){ if(S.done[k]) return; S.done[k]=true; const n=STEPS.find(s=>!S.done[s.key]); if(n && S.active===k) S.active=n.key; renderGuide(); if(!n) toast('2단계 시연을 모두 확인했어요'); }
+
+function fontOf(s){
+  const m=FMETA[s.f], mapped=FONTMAP[m.key] || S.learned[m.key];
+  return {meta:m, mapped};
+}
+function spanStyle(s){
+  if(s.pick!=null){ const f=PCFONTS[s.pick]; return ' style="font-family:'+f.css.replace(/"/g,"'")+';font-weight:'+f.w+'"'; }
+  return '';
+}
+function spanHTML(s){
+  if(s.t==='') return '';
+  const cls='sp'+(S.sel.includes(s.id)?' sel':'')+(s.orig!==undefined?' ed':'');
+  const tip=(S.compare && s.orig!==undefined)?' title="원래: '+esc(s.orig||'(빈칸)')+'"':'';
+  return '<span class="'+cls+'" data-sid="'+s.id+'"'+spanStyle(s)+tip+'>'+esc(s.t)+'</span>';
+}
+const lineHTML=l=>l.map(spanHTML).join('');
+function paperHTML(p){
+  const ps=p.lines.map(l=>'<p>'+lineHTML(l)+'</p>').join('');
+  if(p.kind==='cover') return '<div class="paper k-cover"><h1>'+lineHTML(p.title)+'</h1><div class="rule"></div>'+ps+'</div>';
+  let tb='';
+  if(p.table) tb='<table>'+p.table.map((r,i)=>'<tr>'+r.map(c=>i===0?'<th>'+spanHTML(c)+'</th>':'<td>'+spanHTML(c)+'</td>').join('')+'</tr>').join('')+'</table>';
+  return '<div class="paper"><h2>'+lineHTML(p.title)+'</h2>'+tb+ps+'</div>';
+}
+const wrap=(p,s)=>'<div class="pw" style="transform:translate(-50%,-50%) scale('+s+')">'+paperHTML(p)+'</div>';
+
+const ICON={
+  edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/>',
+  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+  redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/>',
+  save:'<path d="M5 3h11l5 5v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7 3v5h8V3M7 21v-7h10v7"/>'
+};
+const svg=n=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICON[n]+'</svg>';
+
+function renderToolbar(){
+  $('#toolbar').innerHTML=
+    '<button class="tb big" data-act="tool" aria-pressed="'+S.tool+'">'+svg('edit')+'<span>글자 수정</span></button>'+
+    '<button class="tb big" data-act="compare" aria-pressed="'+S.compare+'">'+svg('eye')+'<span>수정 표시</span></button>'+
+    '<span class="sep"></span>'+
+    '<button class="tb" data-act="undo" title="되돌리기 (Ctrl+Z)" '+(S.hist.length?'':'disabled')+'>'+svg('undo')+'</button>'+
+    '<button class="tb" data-act="redo" title="다시 실행 (Ctrl+Y)" '+(S.fut.length?'':'disabled')+'>'+svg('redo')+'</button>'+
+    '<span class="sep"></span>'+
+    '<button class="tb" data-act="save">'+svg('save')+'<span class="lbl">저장</span></button>';
+}
+function renderThumbs(){
+  $('#thumbs').innerHTML=S.doc.map((p,i)=>'<button class="thumb" data-page="'+i+'" aria-pressed="'+(i===S.page)+'" aria-label="'+(i+1)+'쪽"><div class="mini">'+wrap(p, matchMedia('(max-width:960px)').matches?64/420:96/420)+'</div><span>'+(i+1)+'</span></button>').join('');
+}
+let zoom=1;
+function renderViewer(){
+  const v=$('#viewer');
+  v.className='viewer'+(S.tool?' tool':'')+(S.compare?' compare':'');
+  const w=v.clientWidth-48, h=v.clientHeight-48;
+  zoom=Math.max(0.55, Math.min(1.45, Math.min(w/420, h/594)));
+  v.innerHTML='<div class="slot" id="slot" style="width:'+420*zoom+'px;height:'+594*zoom+'px">'+wrap(S.doc[S.page],zoom)+'</div>';
+}
+function selInfo(){
+  const spans=S.sel.map(findSpan).filter(Boolean);
+  if(!spans.length) return null;
+  return {spans, text:spans.map(s=>s.t).join(''), first:spans[0]};
+}
+function renderPanel(){
+  const pn=$('#panel');
+  const info=selInfo();
+  if(!info){
+    const eds=allSpans().filter(([s])=>s.orig!==undefined && s.t!==s.orig && s.t!=='');
+    if(S.compare){
+      pn.innerHTML='<h2>수정한 곳 '+eds.length+'군데</h2>'+(eds.length?'<ul class="edits">'+eds.map(([s,pi])=>'<li>'+(pi+1)+'쪽<br><s>'+esc(s.orig)+'</s> → <b>'+esc(s.t)+'</b></li>').join('')+'</ul>':'<p class="hint">아직 고친 곳이 없어요.</p>')+
+        '<p class="box info" style="margin-top:12px">주황 점선 표시는 화면에서만 보여요. 저장한 PDF에는 남지 않아요.</p>';
+      return;
+    }
+    pn.innerHTML='<h2>글자 수정</h2><p class="hint">'+(S.tool?'고칠 글자 주위를 드래그해서 감싸거나, 글자를 누르세요.':'도구 막대의 [글자 수정]을 누르면 시작할 수 있어요.')+'</p>';
+    return;
+  }
+  const {meta,mapped}=fontOf(info.first);
+  const missing=!mapped && info.first.pick==null;
+  const usePick = !mapped;
+  const curFont = usePick ? PCFONTS[S.pick] : mapped;
+  const val=S.input;
+  const origLen=info.text.length;
+  const tooLong = val.length > origLen + Math.max(3, Math.round(origLen*0.3));
+  if(tooLong) markDone('long');
+  let h='<h2>글자 수정</h2>';
+  if(S.multiNote) h+='<p class="box info">한 줄 안의 글자만 고칠 수 있어서 첫 줄만 골랐어요.</p>';
+  h+='<dl class="kv"><dt>고른 글자</dt><dd><b>'+esc(info.text)+'</b></dd>'+
+     '<dt>PDF 글꼴</dt><dd>'+esc(meta.pdf)+'</dd>'+
+     '<dt>PC 글꼴</dt><dd>'+(mapped?esc(mapped.name)+' <span class="okmark">연결됨</span>':'<b style="color:var(--danger)">찾지 못함</b>')+'</dd>'+
+     '<dt>크기</dt><dd>'+meta.size+'pt</dd><dt>색상</dt><dd>검정 (#23262B)</dd></dl>';
+  if(usePick){
+    h+='<p class="box warn"><b>PDF 안 글꼴(HYHeadLine)이 PC에 없어요.</b><br>비슷한 글꼴을 고르면 그 글꼴로 써넣어요. 원래 모양과 조금 달라질 수 있어요.</p>'+
+       '<div class="field"><label for="pick">대신 쓸 글꼴</label><select id="pick">'+PCFONTS.map((f,i)=>'<option value="'+i+'"'+(i===S.pick?' selected':'')+'>'+esc(f.name)+'</option>').join('')+'</select></div>'+
+       '<label class="chk"><input type="checkbox" id="remember" '+(S.remember?'checked':'')+'> 다음에도 이 글꼴은 고른 글꼴로 자동 연결 (글꼴 연결표에 저장)</label>';
+  }
+  h+='<div class="field"><label for="newText">새 글자</label><input type="text" id="newText" value="'+esc(val)+'" autocomplete="off"></div>';
+  if(tooLong) h+='<p class="box warn"><b>원래 자리보다 많이 길어요.</b><br>PDF는 글자가 뒤로 밀리지 않아서 옆 글자와 겹쳐요. 원본 hwp에서 고친 뒤 3단계의 페이지 교체를 쓰세요.</p>';
+  const css=curFont?curFont.css:SERIF, wgt=curFont?curFont.w:400;
+  h+='<div class="prev"><div><small>수정 전</small><p style="font-family:'+css.replace(/"/g,"'")+';font-weight:'+wgt+'">'+esc(info.text)+'</p></div><div><small>수정 후</small><p style="font-family:'+css.replace(/"/g,"'")+';font-weight:'+wgt+'">'+esc(val)+'</p></div></div>';
+  h+='<div class="actions"><button class="btn" data-act="cancel">취소</button><button class="btn primary" data-act="apply" '+(tooLong||!val||val===info.text?'disabled':'')+'>적용</button></div>';
+  pn.innerHTML=h;
+}
+function renderStatus(){
+  const n=allSpans().filter(([s])=>s.orig!==undefined && s.t!==s.orig).length;
+  $('#status').innerHTML='<span>'+(S.page+1)+' / '+S.doc.length+'쪽</span><span>수정 '+n+'군데</span><span>'+(S.tool?'글자 수정 도구 켜짐':'보기 모드')+'</span><span class="msg">'+esc(S.msg)+'</span>';
+  $('#docname').textContent='— 2026_정기점검보고서.pdf'+(S.dirty?' (수정됨)':'');
+}
+function renderGuide(){
+  const d=STEPS.filter(s=>S.done[s.key]).length;
+  $('#pbar').style.width=(d/STEPS.length*100)+'%'; $('#ptext').textContent=d+' / '+STEPS.length+' 완료';
+  $('#steps').innerHTML=STEPS.map((s,i)=>'<li class="step" data-done="'+!!S.done[s.key]+'" data-active="'+(S.active===s.key)+'"><button class="step-head" data-step="'+s.key+'" aria-expanded="'+(S.active===s.key)+'"><span class="num">'+(S.done[s.key]?'✓':i+1)+'</span><span class="step-title">'+s.title+'</span></button><div class="step-body"><p><strong>해보기</strong>'+s.doit+'</p><p class="real"><strong>실제 프로그램에서는</strong>'+s.real+'</p></div></li>').join('');
+}
+function render(){ renderToolbar(); renderThumbs(); renderViewer(); renderPanel(); renderStatus(); }
+
+/* 선택 */
+function setSelection(ids){
+  const spans=ids.map(findSpan).filter(s=>s && s.t!=='');
+  if(!spans.length){ S.sel=[]; renderViewer(); renderPanel(); return; }
+  const ln=spans[0].ln;
+  const same=spans.filter(s=>s.ln===ln);
+  S.multiNote = same.length<spans.length;
+  S.sel=same.map(s=>s.id);
+  const first=findSpan(S.sel[0]);
+  const {mapped}=fontOf(first);
+  S.input=same.map(s=>s.t).join('');
+  if(!mapped) S.pick=0;
+  S.msg=(S.page+1)+'쪽에서 글자를 골랐어요';
+  renderViewer(); renderPanel(); renderStatus();
+  markDone('select');
+  if(!mapped) markDone('font_seen');
+}
+function apply(){
+  const info=selInfo(); if(!info) return;
+  const {mapped,meta}=fontOf(info.first);
+  record();
+  info.spans.forEach((s,i)=>{ if(s.orig===undefined) s.orig=s.t; });
+  info.spans.forEach((s,i)=>{ s.t = i===0 ? S.input : ''; });
+  if(!mapped){
+    info.first.pick=S.pick;
+    if(S.remember) S.learned[meta.key]={name:PCFONTS[S.pick].name, css:PCFONTS[S.pick].css, w:PCFONTS[S.pick].w, learned:true};
+    markDone('font');
+  } else markDone('apply');
+  S.msg='"'+info.text+'"을(를) "'+S.input+'"(으)로 고쳤어요';
+  S.sel=[]; S.multiNote=false;
+  render(); toast('고쳤어요');
+}
+function undo(){ if(!S.hist.length) return; S.fut.push(clone(S.doc)); S.doc=S.hist.pop(); S.sel=[]; S.msg='되돌렸어요'; render(); markDone('compare'); }
+function redo(){ if(!S.fut.length) return; S.hist.push(clone(S.doc)); S.doc=S.fut.pop(); S.sel=[]; S.msg='다시 실행했어요'; render(); }
+
+/* 이벤트 */
+document.addEventListener('click',e=>{
+  const st=e.target.closest('[data-step]'); if(st){ S.active=st.dataset.step; renderGuide(); return; }
+  const th=e.target.closest('[data-page]'); if(th){ S.page=+th.dataset.page; S.sel=[]; render(); return; }
+  const a=e.target.closest('[data-act]'); if(!a||a.disabled) return;
+  switch(a.dataset.act){
+    case 'tool': S.tool=!S.tool; if(!S.tool) S.sel=[]; S.msg=S.tool?'글자 수정 도구를 켰어요':'글자 수정 도구를 껐어요'; render(); if(S.tool) markDone('tool'); break;
+    case 'compare': S.compare=!S.compare; S.sel=[]; render(); if(S.compare) markDone('compare'); break;
+    case 'undo': undo(); break;
+    case 'redo': redo(); break;
+    case 'cancel': S.sel=[]; S.multiNote=false; renderViewer(); renderPanel(); break;
+    case 'apply': apply(); break;
+    case 'save': S.dirty=false; S.msg='2026_정기점검보고서_수정.pdf로 저장했어요. 원본은 그대로예요'; renderStatus(); toast('다른 이름으로 저장했어요'); break;
+  }
+});
+document.addEventListener('input',e=>{
+  if(e.target.id==='newText'){
+    S.input=e.target.value;
+    const pos=e.target.selectionStart;
+    renderPanel();
+    const n=$('#newText'); if(n){ n.focus(); n.setSelectionRange(pos,pos); }
+  }
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='pick'){ S.pick=+e.target.value; renderPanel(); }
+  if(e.target.id==='remember'){ S.remember=e.target.checked; }
+});
+document.addEventListener('keydown',e=>{
+  if(e.target.id==='newText' && e.key==='Enter'){ const b=document.querySelector('[data-act="apply"]'); if(b && !b.disabled) apply(); return; }
+  if(e.target.matches('input,select,textarea')) return;
+  const mod=e.ctrlKey||e.metaKey;
+  if(mod && e.key.toLowerCase()==='z' && !e.shiftKey){ e.preventDefault(); undo(); }
+  else if(mod && (e.key.toLowerCase()==='y'||(e.key.toLowerCase()==='z'&&e.shiftKey))){ e.preventDefault(); redo(); }
+  else if(e.key==='Escape' && S.sel.length){ S.sel=[]; renderViewer(); renderPanel(); }
+});
+$('#resetBtn').addEventListener('click',()=>{ S=fresh(); render(); renderGuide(); toast('처음 상태로 돌아왔어요'); });
+window.addEventListener('resize',()=>{ renderViewer(); });
+
+/* 드래그 영역 선택 */
+let mq=null;
+document.addEventListener('pointerdown',e=>{
+  if(!S.tool) return;
+  const slot=e.target.closest('#slot'); if(!slot) return;
+  e.preventDefault();
+  const r=slot.getBoundingClientRect();
+  const box=document.createElement('div'); box.className='marquee'; slot.appendChild(box);
+  mq={x:e.clientX, y:e.clientY, box, r, target:e.target};
+  try{ slot.setPointerCapture(e.pointerId); }catch(_){}
+});
+document.addEventListener('pointermove',e=>{
+  if(!mq) return;
+  const x1=Math.min(mq.x,e.clientX), y1=Math.min(mq.y,e.clientY), x2=Math.max(mq.x,e.clientX), y2=Math.max(mq.y,e.clientY);
+  Object.assign(mq.box.style,{left:(x1-mq.r.left)+'px',top:(y1-mq.r.top)+'px',width:(x2-x1)+'px',height:(y2-y1)+'px'});
+  mq.last={x1,y1,x2,y2};
+});
+document.addEventListener('pointerup',e=>{
+  if(!mq) return;
+  const m=mq; mq=null; m.box.remove();
+  if(!m.last || (m.last.x2-m.last.x1<5 && m.last.y2-m.last.y1<5)){
+    const s=m.target.closest && m.target.closest('.sp');
+    setSelection(s?[s.dataset.sid]:[]);
+    return;
+  }
+  const ids=[...document.querySelectorAll('#slot .sp')].filter(el=>{
+    const b=el.getBoundingClientRect();
+    return !(b.right<m.last.x1||b.left>m.last.x2||b.bottom<m.last.y1||b.top>m.last.y2);
+  }).map(el=>el.dataset.sid);
+  setSelection(ids);
+});
+
+render(); renderGuide();
+})();
+</script>
+</body>
+</html>

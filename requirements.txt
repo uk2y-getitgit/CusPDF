@@ -1,0 +1,11 @@
+# 점검 보고서 전용 PDF 편집기 — 설치한 라이브러리 (Python 3.12)
+# 설치: .venv\Scripts\python.exe -m pip install -r requirements.txt
+PySide6==6.12.0
+# 1.x를 쓴다: 2.0은 쓰지 않는 AI 문서분석 부품(onnxruntime 등)까지 함께 깔린다
+# (강제 종료 문제의 진짜 원인은 불러오는 순서였다 → app/pdf/document.py 참고)
+PyMuPDF==1.28.2
+pywin32==312
+Pillow==13.0.0
+PyInstaller==6.22.3
+# 한글 보안 모듈 dll(FilePathCheckerModule.dll) 제공용. 한글 조종 자체는 win32com으로 직접 한다
+pyhwpx==1.7.2
